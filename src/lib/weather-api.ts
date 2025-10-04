@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 import type { WeatherData, TemperatureDistribution, HistoricalTrend, WeatherProbabilities } from './types';
 
@@ -91,7 +92,25 @@ export const fetchMockWeatherData = async (
   const probabilities = calculateProbabilities(historicalTrends);
   
   const avgTempFromHistory = historicalTrends.reduce((sum, d) => sum + d.avgTemp, 0) / historicalTrends.length;
-  const tempDistribution = generateBellCurveData(avgTempFromHistory, 5, 50);
+  
+  let tempDistributionMean = avgTempFromHistory;
+
+  // For future dates, let's make a simple adjustment to the mean temperature
+  // This is a placeholder for a real forecast model
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const selectedDate = new Date(date);
+  selectedDate.setHours(0, 0, 0, 0);
+
+  if (selectedDate > today) {
+    // Simulate a simple seasonal forecast adjustment
+    const dayDiff = (selectedDate.getTime() - today.getTime()) / (1000 * 3600 * 24);
+    const seasonalEffect = Math.sin((dayDiff / 365) * 2 * Math.PI) * 5; // simplified seasonal wave
+    tempDistributionMean += seasonalEffect;
+  }
+
+
+  const tempDistribution = generateBellCurveData(tempDistributionMean, 5, 50);
 
   return {
     location,
@@ -115,6 +134,7 @@ export const fetchLocationSuggestions = async (query: string): Promise<z.infer<t
         { name: 'Paris, France', lat: 48.8566, lon: 2.3522 },
         { name: 'Cairo, Egypt', lat: 30.0444, lon: 31.2357 },
         { name: 'Rio de Janeiro, Brazil', lat: -22.9068, lon: -43.1729 },
+        { name: 'Chennai, India', lat: 13.0827, lon: 80.2707 },
     ];
 
     return locations.filter(loc => loc.name.toLowerCase().includes(query.toLowerCase()));
