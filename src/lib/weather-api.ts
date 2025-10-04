@@ -86,26 +86,30 @@ export async function fetchMockWeatherData(
   const basePrecip = 80 + (nameHash % 40); // Base precip between 80 and 120
 
   const historicalTrends = generateHistoricalData(baseTemp, basePrecip);
-  const probabilities = calculateProbabilities(historicalTrends);
   
-  const avgTempFromHistory = historicalTrends.reduce((sum, d) => sum + d.avgTemp, 0) / historicalTrends.length;
-  
-  let tempDistributionMean = avgTempFromHistory;
-
-  // For future dates, let's make a simple adjustment to the mean temperature
-  // This is a placeholder for a real forecast model
+  let seasonalAdjustment = 0;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const selectedDate = new Date(date);
   selectedDate.setHours(0, 0, 0, 0);
 
   if (selectedDate > today) {
-    // Simulate a simple seasonal forecast adjustment
     const dayDiff = (selectedDate.getTime() - today.getTime()) / (1000 * 3600 * 24);
-    const seasonalEffect = Math.sin((dayDiff / 365) * 2 * Math.PI) * 5; // simplified seasonal wave
-    tempDistributionMean += seasonalEffect;
+    // More pronounced seasonal effect
+    seasonalAdjustment = Math.sin((dayDiff / 365) * 2 * Math.PI) * 8; 
   }
 
+  // Adjust historical data with the seasonal forecast
+  const adjustedHistoricalTrends = historicalTrends.map(trend => ({
+    ...trend,
+    avgTemp: trend.avgTemp + seasonalAdjustment
+  }));
+
+  const probabilities = calculateProbabilities(adjustedHistoricalTrends);
+  
+  const avgTempFromHistory = historicalTrends.reduce((sum, d) => sum + d.avgTemp, 0) / historicalTrends.length;
+  
+  const tempDistributionMean = avgTempFromHistory + seasonalAdjustment;
 
   const tempDistribution = generateBellCurveData(tempDistributionMean, 5, 50);
 
@@ -114,7 +118,7 @@ export async function fetchMockWeatherData(
     date: date.toISOString(),
     probabilities,
     tempDistribution,
-    historicalTrends,
+    historicalTrends, // Return original historicals for the chart
   };
 };
 
