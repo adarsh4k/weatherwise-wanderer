@@ -90,7 +90,7 @@ export function WeatherDashboard({ weatherData, error, isLoading }: WeatherDashb
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
             <CloudDrizzle className="h-8 w-8 text-primary" />
           </div>
-          <CardTitle className="font-headline text-2xl">Welcome to WeatherWise Wanderer</CardTitle>
+          <CardTitle className="text-2xl">Welcome to WeatherWise Wanderer</CardTitle>
           <CardDescription className="max-w-md">
             Enter a location and date to get started. We'll analyze historical data to give you
             personalized weather insights and activity recommendations.
