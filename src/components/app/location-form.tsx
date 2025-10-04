@@ -81,6 +81,15 @@ export function LocationForm({ formAction, isPending }: LocationFormProps) {
   }, [query, form]);
 
   const handleGetCurrentLocation = () => {
+    if (!navigator.geolocation) {
+        toast({
+            variant: 'destructive',
+            title: 'Geolocation Not Supported',
+            description: 'Your browser does not support geolocation.',
+        });
+        return;
+    }
+
     setIsFetchingCurrentLocation(true);
     navigator.geolocation.getCurrentPosition(
       async (position) => {
