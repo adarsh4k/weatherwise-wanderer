@@ -95,13 +95,21 @@ export function LocationForm({ formAction, isPending }: LocationFormProps) {
         setIsFetchingCurrentLocation(false);
       },
       (error) => {
-        toast({ variant: 'destructive', title: "Error", description: "Could not get current location. Please enable location services." });
+        let errorMessage = "Could not get current location. Please enable location services in your browser settings.";
+        if (error.code === error.PERMISSION_DENIED) {
+            errorMessage = "Location access denied. Please enable it in your browser settings to use this feature.";
+        }
+        toast({ variant: 'destructive', title: "Location Error", description: errorMessage });
         setIsFetchingCurrentLocation(false);
       }
     );
   };
   
   function onSubmit(values: FormValues) {
+    if (!values.location) {
+        form.setError("location", { type: "manual", message: "Please select a valid location."});
+        return;
+    }
     const formData = new FormData();
     formData.append('location', JSON.stringify(values.location));
     formData.append('date', values.date.toISOString());
