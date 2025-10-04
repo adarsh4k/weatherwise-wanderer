@@ -70,7 +70,14 @@ export function LocationForm({ formAction, isPending }: LocationFormProps) {
     }, 300);
 
     return () => clearTimeout(debouncedFetch);
-  }, [query]);
+  }, [query, form]);
+  
+  React.useEffect(() => {
+    const selectedLocation = form.getValues('location');
+    if (selectedLocation && query !== selectedLocation.name) {
+      form.setValue('location', null);
+    }
+  }, [query, form]);
 
   const handleGetCurrentLocation = () => {
     setIsFetchingCurrentLocation(true);
@@ -79,7 +86,7 @@ export function LocationForm({ formAction, isPending }: LocationFormProps) {
         const { latitude, longitude } = position.coords;
         const locationDetails = await fetchLocationByCoords(latitude, longitude);
         if (locationDetails) {
-            form.setValue('location', locationDetails);
+            form.setValue('location', locationDetails, { shouldValidate: true });
             setQuery(locationDetails.name);
             toast({ title: "Success", description: "Current location fetched." });
         } else {
@@ -125,12 +132,7 @@ export function LocationForm({ formAction, isPending }: LocationFormProps) {
                             <Input
                                 placeholder="Search for a city..."
                                 value={query}
-                                onChange={(e) => {
-                                    setQuery(e.target.value)
-                                    if(form.getValues('location')?.name !== e.target.value) {
-                                        form.setValue('location', null);
-                                    }
-                                }}
+                                onChange={(e) => setQuery(e.target.value)}
                                 className="pr-10"
                             />
                              <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground" onClick={handleGetCurrentLocation} disabled={isFetchingCurrentLocation}>
@@ -151,7 +153,7 @@ export function LocationForm({ formAction, isPending }: LocationFormProps) {
                                         key={`${suggestion.lat}-${suggestion.lon}`}
                                         value={suggestion.name}
                                         onSelect={() => {
-                                            form.setValue("location", suggestion);
+                                            form.setValue("location", suggestion, { shouldValidate: true });
                                             setQuery(suggestion.name);
                                             setIsPopoverOpen(false);
                                         }}
