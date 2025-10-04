@@ -23,11 +23,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
-import { fetchLocationSuggestions, locationSchema } from '@/lib/weather-api';
+import { fetchLocationSuggestions, fetchLocationByCoords, locationSchema } from '@/lib/weather-api';
 import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
-  location: locationSchema,
+  location: locationSchema.nullable().refine(val => val !== null, { message: "Location is required." }),
   date: z.date({
     required_error: 'A date is required.',
   }),
@@ -44,20 +44,23 @@ export function LocationForm({ formAction, isPending }: LocationFormProps) {
   const [suggestions, setSuggestions] = React.useState<z.infer<typeof locationSchema>[]>([]);
   const [query, setQuery] = React.useState('');
   const [isFetchingSuggestions, setIsFetchingSuggestions] = React.useState(false);
+  const [isFetchingCurrentLocation, setIsFetchingCurrentLocation] = React.useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      location: null,
       date: new Date(),
     },
   });
 
   React.useEffect(() => {
     const debouncedFetch = setTimeout(async () => {
-      if (query.length > 1) {
+      if (query.length > 2) {
         setIsFetchingSuggestions(true);
+        setIsPopoverOpen(true);
         const fetchedSuggestions = await fetchLocationSuggestions(query);
         setSuggestions(fetchedSuggestions);
         setIsFetchingSuggestions(false);
@@ -70,16 +73,23 @@ export function LocationForm({ formAction, isPending }: LocationFormProps) {
   }, [query]);
 
   const handleGetCurrentLocation = () => {
+    setIsFetchingCurrentLocation(true);
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const { latitude, longitude } = position.coords;
-        const currentLocation = { name: "Current Location", lat: latitude, lon: longitude };
-        form.setValue('location', currentLocation);
-        setQuery(currentLocation.name)
-        toast({ title: "Success", description: "Current location fetched." });
+        const locationDetails = await fetchLocationByCoords(latitude, longitude);
+        if (locationDetails) {
+            form.setValue('location', locationDetails);
+            setQuery(locationDetails.name);
+            toast({ title: "Success", description: "Current location fetched." });
+        } else {
+            toast({ variant: 'destructive', title: "Error", description: "Could not get details for current location." });
+        }
+        setIsFetchingCurrentLocation(false);
       },
       (error) => {
-        toast({ variant: 'destructive', title: "Error", description: "Could not get current location." });
+        toast({ variant: 'destructive', title: "Error", description: "Could not get current location. Please enable location services." });
+        setIsFetchingCurrentLocation(false);
       }
     );
   };
@@ -115,21 +125,26 @@ export function LocationForm({ formAction, isPending }: LocationFormProps) {
                             <Input
                                 placeholder="Search for a city..."
                                 value={query}
-                                onChange={(e) => setQuery(e.target.value)}
+                                onChange={(e) => {
+                                    setQuery(e.target.value)
+                                    if(form.getValues('location')?.name !== e.target.value) {
+                                        form.setValue('location', null);
+                                    }
+                                }}
                                 className="pr-10"
                             />
-                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground" onClick={handleGetCurrentLocation}>
-                                <LocateFixedIcon className="h-4 w-4" />
+                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground" onClick={handleGetCurrentLocation} disabled={isFetchingCurrentLocation}>
+                                {isFetchingCurrentLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixedIcon className="h-4 w-4" />}
                             </Button>
                         </div>
                       </FormControl>
                     </PopoverTrigger>
                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                        <Command>
-                            <CommandInput placeholder="Search location..." onValueChange={setQuery} value={query} />
+                        <Command shouldFilter={false}>
+                            <CommandInput placeholder="Search location..." value={query} onValueChange={setQuery} />
                             <CommandList>
                                 {isFetchingSuggestions && <div className="p-2 text-center text-sm">Loading...</div>}
-                                <CommandEmpty>No results found.</CommandEmpty>
+                                <CommandEmpty>{!isFetchingSuggestions && query.length > 2 ? 'No results found.' : 'Type to search...'}</CommandEmpty>
                                 <CommandGroup>
                                     {suggestions.map((suggestion) => (
                                     <CommandItem
@@ -180,7 +195,7 @@ export function LocationForm({ formAction, isPending }: LocationFormProps) {
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
-                        disabled={(date) => date < new Date('1900-01-01')}
+                        disabled={(date) => date.getFullYear() > 2100 || date < new Date('1900-01-01')}
                         initialFocus
                       />
                     </PopoverContent>

@@ -121,21 +121,45 @@ export const fetchMockWeatherData = async (
   };
 };
 
-// Mock function for location suggestions
+const GEOCODING_API_URL = 'https://nominatim.openstreetmap.org/search';
+
+// Real function for location suggestions
 export const fetchLocationSuggestions = async (query: string): Promise<z.infer<typeof locationSchema>[]> => {
     if (!query || query.length < 2) return [];
-    await new Promise(res => setTimeout(res, 300));
     
-    const locations = [
-        { name: 'New York, USA', lat: 40.7128, lon: -74.0060 },
-        { name: 'London, UK', lat: 51.5072, lon: -0.1276 },
-        { name: 'Tokyo, Japan', lat: 35.6762, lon: 139.6503 },
-        { name: 'Sydney, Australia', lat: -33.8688, lon: 151.2093 },
-        { name: 'Paris, France', lat: 48.8566, lon: 2.3522 },
-        { name: 'Cairo, Egypt', lat: 30.0444, lon: 31.2357 },
-        { name: 'Rio de Janeiro, Brazil', lat: -22.9068, lon: -43.1729 },
-        { name: 'Chennai, India', lat: 13.0827, lon: 80.2707 },
-    ];
+    try {
+        const response = await fetch(`${GEOCODING_API_URL}?q=${encodeURIComponent(query)}&format=json&limit=5`);
+        if (!response.ok) {
+            console.error('Failed to fetch location suggestions');
+            return [];
+        }
+        const data = await response.json();
+        
+        const suggestions = data.map((item: any) => ({
+            name: item.display_name,
+            lat: parseFloat(item.lat),
+            lon: parseFloat(item.lon),
+        }));
+        
+        return locationSchema.array().parse(suggestions);
+    } catch (error) {
+        console.error("Error fetching or parsing location suggestions:", error);
+        return [];
+    }
+};
 
-    return locations.filter(loc => loc.name.toLowerCase().includes(query.toLowerCase()));
-}
+export const fetchLocationByCoords = async (lat: number, lon: number): Promise<z.infer<typeof locationSchema> | null> => {
+    try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+        if (!response.ok) {
+            console.error('Failed to fetch location from coordinates');
+            return null;
+        }
+        const data = await response.json();
+        const name = data.display_name || 'Unnamed Location';
+        return locationSchema.parse({ name, lat, lon });
+    } catch (error) {
+        console.error("Error fetching or parsing reverse geocoding:", error);
+        return null;
+    }
+};
