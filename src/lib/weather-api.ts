@@ -1,12 +1,9 @@
 
+'use server';
+
 import { z } from 'zod';
 import type { WeatherData, TemperatureDistribution, HistoricalTrend, WeatherProbabilities } from './types';
-
-export const locationSchema = z.object({
-  name: z.string(),
-  lat: z.number(),
-  lon: z.number(),
-});
+import { locationSchema } from './types';
 
 // Helper function to generate a random number within a range
 const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
@@ -76,10 +73,10 @@ const calculateProbabilities = (historicalData: HistoricalTrend): WeatherProbabi
 
 
 // Main mock API function
-export const fetchMockWeatherData = async (
+export async function fetchMockWeatherData(
   location: z.infer<typeof locationSchema>,
   date: Date
-): Promise<WeatherData> => {
+): Promise<WeatherData> {
   // Simulate network delay
   await new Promise(res => setTimeout(res, 1500));
 
@@ -124,31 +121,42 @@ export const fetchMockWeatherData = async (
 const GEOCODING_API_URL = 'https://nominatim.openstreetmap.org/search';
 
 // Real function for location suggestions
-export const fetchLocationSuggestions = async (query: string): Promise<z.infer<typeof locationSchema>[]> => {
+export async function fetchLocationSuggestions(query: string): Promise<z.infer<typeof locationSchema>[]> {
     if (!query || query.length < 2) return [];
     
     try {
-        const response = await fetch(`${GEOCODING_API_URL}?q=${encodeURIComponent(query)}&format=json&limit=5`);
+        const response = await fetch(`${GEOCODING_API_URL}?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1`);
         if (!response.ok) {
             console.error('Failed to fetch location suggestions');
             return [];
         }
         const data = await response.json();
         
-        const suggestions = data.map((item: any) => ({
-            name: item.display_name,
-            lat: parseFloat(item.lat),
-            lon: parseFloat(item.lon),
-        }));
+        const suggestions = data.map((item: any) => {
+            // Nominatim provides name in address object, which can vary
+            const name = item.display_name;
+            return {
+                name: name,
+                lat: parseFloat(item.lat),
+                lon: parseFloat(item.lon),
+            };
+        }).filter((item: any): item is z.infer<typeof locationSchema> => {
+            try {
+                locationSchema.parse(item);
+                return true;
+            } catch {
+                return false;
+            }
+        });
         
-        return locationSchema.array().parse(suggestions);
+        return suggestions;
     } catch (error) {
         console.error("Error fetching or parsing location suggestions:", error);
         return [];
     }
 };
 
-export const fetchLocationByCoords = async (lat: number, lon: number): Promise<z.infer<typeof locationSchema> | null> => {
+export async function fetchLocationByCoords(lat: number, lon: number): Promise<z.infer<typeof locationSchema> | null> {
     try {
         const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
         if (!response.ok) {
@@ -157,7 +165,12 @@ export const fetchLocationByCoords = async (lat: number, lon: number): Promise<z
         }
         const data = await response.json();
         const name = data.display_name || 'Unnamed Location';
-        return locationSchema.parse({ name, lat, lon });
+        const parsedLocation = locationSchema.safeParse({ name, lat, lon });
+        if (parsedLocation.success) {
+            return parsedLocation.data;
+        }
+        console.error("Could not parse location from coords", parsedLocation.error);
+        return null;
     } catch (error) {
         console.error("Error fetching or parsing reverse geocoding:", error);
         return null;

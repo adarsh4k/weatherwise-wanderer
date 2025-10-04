@@ -1,5 +1,10 @@
-import type { z } from "zod";
-import type { locationSchema } from "@/lib/weather-api";
+import { z } from "zod";
+
+export const locationSchema = z.object({
+  name: z.string(),
+  lat: z.number(),
+  lon: z.number(),
+});
 
 export type WeatherProbabilities = {
   hot: number;

@@ -1,8 +1,9 @@
 'use server';
 
 import { z } from 'zod';
-import { fetchMockWeatherData, locationSchema } from '@/lib/weather-api';
+import { fetchMockWeatherData } from '@/lib/weather-api';
 import type { FormState } from '@/lib/types';
+import { locationSchema } from '@/lib/types';
 
 const formSchema = z.object({
   location: z.string(),

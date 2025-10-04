@@ -23,8 +23,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
-import { fetchLocationSuggestions, fetchLocationByCoords, locationSchema } from '@/lib/weather-api';
+import { fetchLocationSuggestions, fetchLocationByCoords } from '@/lib/weather-api';
 import { useToast } from '@/hooks/use-toast';
+import { locationSchema } from '@/lib/types';
 
 const formSchema = z.object({
   location: locationSchema.nullable().refine(val => val !== null, { message: "Location is required." }),
