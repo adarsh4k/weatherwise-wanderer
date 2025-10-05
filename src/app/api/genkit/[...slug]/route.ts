@@ -1,5 +1,9 @@
 'use server';
-// src/app/api/genkit/[...slug]/route.ts
+/**
+ * @fileoverview This file is the entrypoint for Genkit's Next.js integration.
+ *
+ * It is used to handle API requests for Genkit flows.
+ */
 import {ai} from '@/ai/genkit';
 import * as genkitNext from '@genkit-ai/next';
 
