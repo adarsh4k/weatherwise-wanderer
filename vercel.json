@@ -1,7 +1,6 @@
-
 {
   "functions": {
-    "src/ai/flows/**/*.ts": {
+    "src/app/api/genkit/[...slug]/route.ts": {
       "maxDuration": 30
     }
   }
