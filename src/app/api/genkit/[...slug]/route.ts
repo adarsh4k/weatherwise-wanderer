@@ -1,9 +1,9 @@
 'use server';
 // src/app/api/genkit/[...slug]/route.ts
 import {ai} from '@/ai/genkit';
-import {nextHandler} from '@genkit-ai/next';
+import * as genkitNext from '@genkit-ai/next';
 
 // Ensure all flows are loaded
 import '@/ai/flows/personalized-activity-recommendations';
 
-export const {POST} = nextHandler(ai);
+export const {POST} = genkitNext.nextHandler(ai);
